@@ -61,17 +61,15 @@ export async function SpaPlugin(options: SpaOptions) {
   plugin
     .get(
       normalizeUrlPath(prefix),
-      ({ request, set }) => {
-        createStaticResponse({
-          assets,
-          filePath: index,
-          filePathSet: filePathsSet,
-          reqHeaders: request.headers,
-          setHeaders: set.headers,
-          compressionMapping,
-          servingIndex: true,
-        })
-      },
+      ({ request, set }) => createStaticResponse({
+        assets,
+        filePath: index,
+        filePathSet: filePathsSet,
+        reqHeaders: request.headers,
+        setHeaders: set.headers,
+        compressionMapping,
+        servingIndex: true,
+      }),
     )
     .get(
       normalizeUrlPath(prefix, '*'),

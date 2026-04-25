@@ -1,7 +1,7 @@
 {
   "name": "elysia-spa",
   "type": "module",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Type-safe Elysia plugin for serving Single Page Applications from a static folder",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",

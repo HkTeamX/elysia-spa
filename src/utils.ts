@@ -1,5 +1,6 @@
 import type { HTTPHeaders } from 'elysia'
 import path from 'node:path'
+import { NotFoundError } from 'elysia'
 
 const encodingCache = new Map<string, Array<{ name: string, quality: number }>>()
 const ENCODING_PRIORITY: Record<string, number> = {
@@ -73,7 +74,7 @@ export function createStaticResponse(options: CreateStaticResponseOptions) {
   const { assets, filePath, filePathSet, reqHeaders, setHeaders, compressionMapping, servingIndex = false } = options
 
   if (servingIndex && reqHeaders.get('accept')?.includes('text/html') !== true) {
-    return
+    throw new NotFoundError()
   }
 
   const originalFile = Bun.file(path.join(assets, filePath))
