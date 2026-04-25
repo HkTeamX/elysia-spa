@@ -1,7 +1,7 @@
-export type CompressionAlgorithm = 'gzip' | 'br'
-
 export interface SpaOptions {
-  assets?: string
+  assets: string
   prefix?: string
   index?: string
+  /** A mapping of encoding names to compressed file suffixes (with or without leading dot). */
+  compressionMapping?: Record<string, string>
 }

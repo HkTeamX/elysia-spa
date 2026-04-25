@@ -1,35 +1,31 @@
 # elysia-spa
 
-一个面向 Elysia 的 Type-safe SPA 静态资源插件，用于从指定目录提供单页应用资源，并自动将未知路由回退到 `index.html`。
+[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-## 特性
+Type-safe Elysia plugin for serving Single Page Applications from a static folder.
 
-- TypeScript 友好，带完整类型定义
-- 自动注册静态资源路由（来自 `assets` 目录）
-- SPA 回退策略：未命中资源时返回 `index.html`
-- 支持预压缩资源协商：优先返回 `.br` / `.gz`
-- 自动设置 `Vary: Accept-Encoding`
+It scans your built frontend assets, registers static routes automatically, serves pre-compressed files when available, and falls back to `index.html` for SPA navigation requests.
 
-## 运行环境
+> Bun only. This package depends on Bun APIs such as `Bun.file` and `Glob`, and is not intended to run on a plain Node.js runtime.
 
-本插件依赖 Bun API（如 `Bun.file`、`Glob`），请在 Bun 环境下运行。
+## Features
 
-- Bun 1.0+
-- Elysia `^1.4.28`
+- Serve an SPA from any static asset directory
+- Auto-register routes for discovered files
+- Support custom mount prefixes such as `/` or `/app`
+- Negotiate pre-compressed assets with `Accept-Encoding`
+- Fall back to `index.html` for HTML navigation requests
+- Written in TypeScript and designed for Elysia
 
-## 安装
+## Installation
 
 ```bash
 bun add elysia-spa
 ```
 
-如果你在开发本仓库：
+`elysia` is a peer dependency, so make sure it is installed in your Bun app as well.
 
-```bash
-bun install
-```
-
-## 快速开始
+## Quick Start
 
 ```ts
 import { Elysia } from 'elysia'
@@ -37,110 +33,148 @@ import { SpaPlugin } from 'elysia-spa'
 
 const app = new Elysia()
 
-app.use(SpaPlugin({
+app.use(await SpaPlugin({
   assets: './public',
-  prefix: '/',
-  index: 'index.html',
 }))
 
 app.listen(3000)
 ```
 
-目录示例：
+If your frontend build outputs files like:
 
 ```text
 public/
-	index.html
-	assets/app.js
-	assets/app.css
-	assets/app.js.br
-	assets/app.js.gz
+  index.html
+  assets/app.js
+  assets/app.css
 ```
 
-## 配置项
+Then the plugin will serve:
 
-`SpaPlugin(options?: SpaOptions)`
+- `/` -> `index.html`
+- `/assets/app.js` -> `public/assets/app.js`
+- `/assets/app.css` -> `public/assets/app.css`
+- Unmatched HTML navigation requests -> `index.html`
 
-```ts
-export interface SpaOptions {
-  assets?: string
-  prefix?: string
-  index?: string
-}
-```
+## Use With a Prefix
 
-默认值：
-
-- `assets`: `/public`
-- `prefix`: `/`
-- `index`: `index.html`
-
-说明：
-
-- `assets`: 静态资源根目录
-- `prefix`: 资源挂载前缀，例如 `/app` 时将注册 `/app/*`
-- `index`: SPA 入口文件名（相对 `assets`）
-
-## 路由行为
-
-插件会执行以下逻辑：
-
-1. 扫描 `assets` 目录下所有文件。
-2. 为每个普通文件注册 GET 路由（跳过 `index` 本体以及 `.br`、`.gz` 文件）。
-3. 注册 `prefix` 根路径，返回 `index`。
-4. 注册 `prefix/*` 通配路径，未命中资源时回退到 `index`。
-
-这意味着：
-
-- 已存在的静态资源按文件路径返回
-- 前端路由（如 `/dashboard`）会回退到 `index.html`
-
-## 压缩资源协商
-
-当请求头包含 `Accept-Encoding` 时，插件会按权重（`q`）从高到低选择编码，并查找同名预压缩文件：
-
-- `br` -> 查找 `*.br`
-- `gzip` -> 查找 `*.gz`
-
-命中后会返回压缩文件并设置：
-
-- `Content-Encoding: br|gzip`
-- `Content-Type`（继承原始文件 MIME）
-- `Vary: Accept-Encoding`
-
-未命中预压缩文件时返回原始文件。
-
-## 示例：子路径部署
+Mount the SPA under a sub-path:
 
 ```ts
-app.use(SpaPlugin({
-  assets: './dist/client',
-  prefix: '/admin',
-  index: 'index.html',
+import { Elysia } from 'elysia'
+import { SpaPlugin } from 'elysia-spa'
+
+const app = new Elysia()
+
+app.use(await SpaPlugin({
+  assets: './public',
+  prefix: '/app',
 }))
 ```
 
-效果：
+This will serve the SPA from `/app`.
 
-- 静态资源映射到 `/admin/...`
-- 访问 `/admin` 或 `/admin/any/path` 回退到 `index.html`
+## API
 
-## 开发
+### `SpaPlugin(options)`
 
-```bash
-bun run lint
-bun run typecheck
-bun run build
+Creates and returns an Elysia plugin that serves files from the configured asset directory.
+
+```ts
+interface SpaOptions {
+  assets: string
+  prefix?: string
+  index?: string
+  compressionMapping?: Record<string, string>
+}
 ```
 
-## 导出内容
+## Options
 
-- `SpaPlugin`
-- `SpaOptions`
-- `parseAcceptedEncodings`
-- `createStaticResponse`
-- `normalizeUrlPath`
+### `assets`
 
-## 许可证
+Type: `string`
+
+Required. Path to the built frontend assets directory.
+
+Example:
+
+```ts
+assets: './dist/client'
+```
+
+### `prefix`
+
+Type: `string`
+
+Default: `'/'`
+
+Base URL prefix used to expose the SPA.
+
+Example:
+
+```ts
+prefix: '/dashboard'
+```
+
+### `index`
+
+Type: `string`
+
+Default: `'index.html'`
+
+Entry HTML file used for root access and SPA fallback.
+
+### `compressionMapping`
+
+Type: `Record<string, string>`
+
+Default:
+
+```ts
+{
+  gzip: '.gz',
+  br: '.br',
+  zstd: '.zst',
+}
+```
+
+Maps accepted content encodings to pre-compressed file suffixes.
+
+## Pre-compressed Assets
+
+If your asset directory contains compressed variants, the plugin can serve them automatically.
+
+Example:
+
+```text
+public/
+  index.html
+  assets/app.js
+  assets/app.js.gz
+  assets/app.js.br
+```
+
+When the client sends a compatible `Accept-Encoding` header, the plugin will prefer the matching compressed file and set:
+
+- `Content-Encoding`
+- `Vary: Accept-Encoding`
+
+The original file content type is preserved.
+
+## SPA Fallback Behavior
+
+The plugin falls back to the configured `index` file for routes that are not matched by a static file route.
+
+To avoid returning HTML for asset requests by mistake, fallback is only intended for requests that accept HTML. In practice this means browser navigation works as expected, while missing static assets should still surface as missing resources instead of silently returning `index.html`.
+
+## Notes
+
+- `assets` should point to an existing built frontend output directory
+- `index` should be present inside the `assets` directory
+- Pre-compressed files should use the suffixes defined by `compressionMapping`
+- This package only works in Bun and Elysia-based applications
+
+## License
 
 MIT
